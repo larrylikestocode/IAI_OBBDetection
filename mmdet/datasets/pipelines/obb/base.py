@@ -89,6 +89,49 @@ class LoadOBBAnnotations(LoadAnnotations):
 
 
 @PIPELINES.register_module()
+class IaiLoadOBBAnnotations(LoadAnnotations):
+
+    def __init__(self,
+                 with_bbox=True,
+                 with_label=True,
+                 with_mask=False,
+                 with_seg=False,
+                 obb_as_mask=True,
+                 bbox_mtype='polygon',
+                 poly2mask=False,
+                 file_client_args=dict(backend='disk')):
+        super(IaiLoadOBBAnnotations, self).__init__(
+            with_bbox=with_bbox,
+            with_label=with_label,
+            with_mask=with_mask,
+            with_seg=with_seg,
+            poly2mask=poly2mask,
+            file_client_args=file_client_args)
+        self.obb_as_mask = False if with_mask else obb_as_mask
+        assert bbox_mtype in ['polygon', 'bitmap']
+        self.bbox_mtype = bbox_mtype
+
+    def _load_bboxes(self, results):
+        try:
+            ann_info = results['ann_info']
+        except:
+            print("annotations are not found")
+            return results
+        gt_bboxes = ann_info['bboxes'].copy()
+        results['gt_bboxes'] = bt.bbox2type(gt_bboxes, 'hbb')
+        results['bbox_fields'].append('gt_bboxes')
+
+        if self.obb_as_mask:
+            MaskClass = PolygonMasks if self.bbox_mtype == 'polygon' \
+                    else BitmapMasks
+            h, w = results['img_info']['height'], results['img_info']['width']
+            results['gt_masks'] = bbox2mask(gt_bboxes, w, h, self.bbox_mtype)
+            results['gt_masks_ignore'] = MaskClass([], h, w)
+            results['mask_fields'].append('gt_masks')
+        return results
+
+
+@PIPELINES.register_module()
 class TopNAreaObject:
 
     def __init__(self, n=500):

@@ -1,5 +1,7 @@
 dataset_type = 'DOTADataset'
-data_root = 'data/ss_dota_split/'
+# data_root = 'BboxToolkit/data/split_ss_carla_100/'
+data_root = 'BboxToolkit/data/split_ss_iai_v2/'
+
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
 train_pipeline = [
@@ -21,6 +23,8 @@ train_pipeline = [
 ]
 test_pipeline = [
     dict(type='LoadImageFromFile'),
+    dict(type='IaiLoadOBBAnnotations', with_bbox=True,
+         with_label=True, obb_as_mask=False),
     dict(
         type='MultiScaleFlipRotateAug',
         img_scale=[(1024, 1024)],
@@ -34,7 +38,7 @@ test_pipeline = [
             dict(type='RandomOBBRotate', rotate_after_flip=True),
             dict(type='Pad', size_divisor=32),
             dict(type='ImageToTensor', keys=['img']),
-            dict(type='OBBCollect', keys=['img']),
+            dict(type='OBBCollect', keys=['img', 'gt_bboxes', 'gt_labels', 'ann_info']),
         ])
 ]
 
@@ -71,8 +75,8 @@ data = dict(
     train=dict(
         type=dataset_type,
         task='Task1',
-        ann_file=data_root + 'trainval/annfiles/',
-        img_prefix=data_root + 'trainval/images/',
+        ann_file=data_root + 'train/annfiles/',
+        img_prefix=data_root + 'train/images/',
         pipeline=train_pipeline),
     test=dict(
         type=dataset_type,
